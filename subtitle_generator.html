@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片字幕生成器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .file-selector {
+            margin-bottom: 20px;
+        }
+        .params {
+            margin-bottom: 20px;
+        }
+        .param-item {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 10px;
+        }
+        .param-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        .param-item input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .param-item input[type="text"] {
+            width: 150px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .param-item select {
+            width: 120px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .param-item input[type="color"] {
+            width: 50px;
+            height: 30px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .subtitle-input {
+            margin-bottom: 20px;
+        }
+        .subtitle-input label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        .subtitle-input textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            resize: vertical;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+        .buttons {
+            margin-bottom: 30px;
+        }
+        .buttons button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .buttons button:hover {
+            background-color: #45a049;
+        }
+        .preview {
+            margin-top: 30px;
+            text-align: center;
+        }
+        .preview h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        #previewImage {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>图片字幕生成器</h1>
+    
+    <div class="file-selector">
+        <label for="imageFile">选择文件：</label>
+        <input type="file" id="imageFile" accept="image/*">
+    </div>
+    
+    <div class="params">
+        <div class="param-item">
+            <label for="subtitleHeight">字幕高度(px)：</label>
+            <input type="number" id="subtitleHeight" value="40" min="10" max="200">
+        </div>
+        <div class="param-item">
+            <label for="fontSize">字体大小(px)：</label>
+            <input type="number" id="fontSize" value="20" min="5" max="100">
+        </div>
+        <div class="param-item">
+            <label for="fontColor">字体颜色：</label>
+            <input type="color" id="fontColor" value="#ffffff">
+        </div>
+        <div class="param-item">
+            <label for="outlineColor">轮廓颜色：</label>
+            <input type="color" id="outlineColor" value="#000000">
+        </div>
+    </div>
+    
+    <div class="params">
+        <h3>水印设置</h3>
+        <div class="param-item">
+            <label for="watermarkText">水印文本：</label>
+            <input type="text" id="watermarkText" value="南瓜博士" placeholder="请输入水印文本">
+        </div>
+        <div class="param-item">
+            <label for="watermarkSize">水印大小(px)：</label>
+            <input type="number" id="watermarkSize" value="14" min="5" max="50">
+        </div>
+        <div class="param-item">
+            <label for="watermarkColor">水印颜色：</label>
+            <input type="color" id="watermarkColor" value="#ffffff">
+        </div>
+        <div class="param-item">
+            <label for="watermarkOpacity">水印透明度：</label>
+            <input type="number" id="watermarkOpacity" value="0.5" min="0" max="1" step="0.1">
+        </div>
+        <div class="param-item">
+            <label for="watermarkPosition">水印位置：</label>
+            <select id="watermarkPosition">
+                <option value="bottom-right">右下角</option>
+                <option value="bottom-left">左下角</option>
+                <option value="top-right">右上角</option>
+                <option value="top-left">左上角</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="subtitle-input">
+        <label for="subtitleText">字幕内容：</label>
+        <textarea id="subtitleText" placeholder="请输入字幕内容，每行一条">别吵
+我在给自己写钓鱼网站呢
+对，这年头
+咱们猫咪都能自己写代码了</textarea>
+    </div>
+    
+    <div class="buttons">
+        <button id="generateBtn">生成字幕图片</button>
+        <button id="saveBtn">保存图片</button>
+    </div>
+    
+    <div class="preview">
+        <h3>预览效果：</h3>
+        <img id="previewImage" src="" alt="预览图片">
+    </div>
+    
+    <script>
+        let originalImage = null;
+        let generatedCanvas = null;
+        
+        // 图片选择事件
+        document.getElementById('imageFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    originalImage = new Image();
+                    originalImage.onload = function() {
+                        document.getElementById('previewImage').src = e.target.result;
+                    };
+                    originalImage.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // 生成字幕图片
+        document.getElementById('generateBtn').addEventListener('click', function() {
+            if (!originalImage) {
+                alert('请先选择一张图片');
+                return;
+            }
+            
+            const subtitleHeight = parseInt(document.getElementById('subtitleHeight').value);
+            const fontSize = parseInt(document.getElementById('fontSize').value);
+            const fontColor = document.getElementById('fontColor').value;
+            const outlineColor = document.getElementById('outlineColor').value;
+            const subtitleText = document.getElementById('subtitleText').value;
+            const subtitleLines = subtitleText.split('\n').filter(line => line.trim() !== '');
+            
+            // 获取水印参数
+            const watermarkText = document.getElementById('watermarkText').value;
+            const watermarkSize = parseInt(document.getElementById('watermarkSize').value);
+            const watermarkColor = document.getElementById('watermarkColor').value;
+            const watermarkOpacity = parseFloat(document.getElementById('watermarkOpacity').value);
+            const watermarkPosition = document.getElementById('watermarkPosition').value;
+            
+            // 创建画布
+            const canvas = document.createElement('canvas');
+            canvas.width = originalImage.width;
+            canvas.height = originalImage.height + subtitleHeight * subtitleLines.length;
+            const ctx = canvas.getContext('2d');
+            
+            // 绘制原始图片
+            ctx.drawImage(originalImage, 0, 0);
+            
+            // 绘制字幕
+            const lineHeight = subtitleHeight;
+            const padding = (lineHeight - fontSize) / 2;
+            
+            subtitleLines.forEach((line, index) => {
+                const y = originalImage.height + index * lineHeight + lineHeight - padding;
+                
+                // 绘制字幕背景（统一背景色，呈现切割感）
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, originalImage.height + index * lineHeight, canvas.width, lineHeight);
+                
+                // 绘制文字轮廓
+                ctx.font = `${fontSize}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.strokeStyle = outlineColor;
+                ctx.lineWidth = 2;
+                ctx.strokeText(line, canvas.width / 2, y);
+                
+                // 绘制文字
+                ctx.fillStyle = fontColor;
+                ctx.fillText(line, canvas.width / 2, y);
+            });
+            
+            // 绘制水印
+            if (watermarkText) {
+                ctx.font = `${watermarkSize}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = watermarkColor.replace('rgb', 'rgba').replace(')', `, ${watermarkOpacity})`);
+                
+                let x, y;
+                const margin = 20;
+                
+                // 根据选择的位置计算水印坐标
+                switch (watermarkPosition) {
+                    case 'bottom-right':
+                        ctx.textAlign = 'right';
+                        ctx.textBaseline = 'bottom';
+                        x = canvas.width - margin;
+                        y = canvas.height - margin;
+                        break;
+                    case 'bottom-left':
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'bottom';
+                        x = margin;
+                        y = canvas.height - margin;
+                        break;
+                    case 'top-right':
+                        ctx.textAlign = 'right';
+                        ctx.textBaseline = 'top';
+                        x = canvas.width - margin;
+                        y = margin;
+                        break;
+                    case 'top-left':
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'top';
+                        x = margin;
+                        y = margin;
+                        break;
+                }
+                
+                ctx.fillText(watermarkText, x, y);
+            }
+            
+            // 保存生成的画布
+            generatedCanvas = canvas;
+            
+            // 更新预览
+            const previewImage = document.getElementById('previewImage');
+            previewImage.src = canvas.toDataURL('image/png');
+        });
+        
+        // 保存图片
+        document.getElementById('saveBtn').addEventListener('click', function() {
+            if (!generatedCanvas) {
+                alert('请先生成字幕图片');
+                return;
+            }
+            
+            // 创建下载链接
+            const link = document.createElement('a');
+            link.download = 'subtitle_image.png';
+            link.href = generatedCanvas.toDataURL('image/png');
+            link.click();
+        });
+        
+        // 初始化预览
+        window.onload = function() {
+            // 创建默认预览图片
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 400;
+            const ctx = canvas.getContext('2d');
+            
+            // 绘制默认背景
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制示例文字
+            ctx.fillStyle = '#ecf0f1';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('请选择一张图片', canvas.width / 2, canvas.height / 2);
+            
+            document.getElementById('previewImage').src = canvas.toDataURL('image/png');
+        };
+    </script>
+</body>
+</html>
